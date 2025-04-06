@@ -1,5 +1,5 @@
 const express = require("express");
-const Book = require("../models/Book");
+const Book = require("../models/book");
 const upload = require("../helpers/upload"); // Multer middleware
 const uploadFileToS3 = require("../helpers/uploadtos3"); // AWS S3 upload helper
 const { authMiddleware } = require("../controllers/auth/auth-controller");
