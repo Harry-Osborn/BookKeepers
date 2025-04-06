@@ -12,7 +12,7 @@ import {
 } from "../ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useDispatch, useSelector } from "react-redux";
-import { logoutUser } from "@/store/auth-slice";
+import { logoutUser, resetTokenAndCredentials } from "@/store/auth-slice";
 import { useEffect, useState } from "react";
 import { fetchUserFromDB } from "@/services/api";
 
@@ -47,7 +47,8 @@ function Navbar() {
   }, []);
 
   const handleLogout = () => {
-    dispatch(logoutUser());
+    dispatch(resetTokenAndCredentials());
+    sessionStorage.clear();
     navigate("/auth/login");
   };
 
