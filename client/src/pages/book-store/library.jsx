@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   fetchBooksFromDB,
   updateBookStatus,
   updateBookProgress,
 } from "@/services/api";
 import { useLocation } from "react-router-dom";
+import { Document, Page, pdfjs } from "react-pdf";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 function BookLibrary() {
   const [books, setBooks] = useState([]);
@@ -14,15 +17,17 @@ function BookLibrary() {
   const [selectedBook, setSelectedBook] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(null);
-  const [inputTotalPages, setInputTotalPages] = useState("");
   const [uniqueGenres, setUniqueGenres] = useState([]);
+  const [zoom, setZoom] = useState(1.0);
+  const viewerRef = useRef(null);
   const location = useLocation();
+
+  const [pageWidth, setPageWidth] = useState(0);
 
   useEffect(() => {
     const fetchBooks = async () => {
       const data = await fetchBooksFromDB();
       setBooks(data);
-
       const genres = [...new Set(data.map((book) => book.genre))];
       setUniqueGenres(genres);
     };
@@ -36,18 +41,24 @@ function BookLibrary() {
     }
   }, [location.search]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (viewerRef.current) {
+        setPageWidth(viewerRef.current.offsetWidth);
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [selectedBook]);
+
   const handleOpenBook = async (book) => {
     const savedPage = parseInt(
       localStorage.getItem(`book-${book._id}-page`) || "1"
     );
-    const savedTotalPages = parseInt(
-      localStorage.getItem(`book-${book._id}-totalPages`)
-    );
-
     setCurrentPage(savedPage);
-    setTotalPages(savedTotalPages || null);
-    setInputTotalPages("");
     setSelectedBook(book);
+    setZoom(1.0);
 
     if (book.status === "Unread") {
       await updateBookStatus(book._id, "Reading");
@@ -61,77 +72,31 @@ function BookLibrary() {
 
   const handleClosePopup = async () => {
     try {
-      const iframe = document.querySelector("iframe");
-      const iframeDoc =
-        iframe?.contentDocument || iframe?.contentWindow?.document;
+      if (selectedBook && totalPages) {
+        const progress = Math.floor((currentPage / totalPages) * 100);
+        await updateBookProgress(selectedBook._id, {
+          lastReadPage: currentPage,
+          totalPages,
+          progress,
+        });
 
-      if (iframeDoc) {
-        const pageInput = iframeDoc.getElementById("pageNumber");
-        if (pageInput && pageInput.value) {
-          const detectedPage = parseInt(pageInput.value);
-          if (!isNaN(detectedPage)) {
-            setCurrentPage(detectedPage);
-            localStorage.setItem(
-              `book-${selectedBook?._id}-page`,
-              detectedPage
-            );
-
-            if (totalPages && !isNaN(totalPages)) {
-              const progress = Math.floor((detectedPage / totalPages) * 100);
-              await updateBookProgress(selectedBook._id, {
-                lastReadPage: detectedPage,
-                totalPages,
-                progress,
-              });
-
-              const newStatus = progress === 100 ? "Completed" : "Reading";
-
-              if (selectedBook.status !== newStatus) {
-                await updateBookStatus(selectedBook._id, newStatus);
-                setBooks((prevBooks) =>
-                  prevBooks.map((b) =>
-                    b._id === selectedBook._id ? { ...b, status: newStatus } : b
-                  )
-                );
-              }
-            }
-          }
+        const newStatus = progress === 100 ? "Completed" : "Reading";
+        if (selectedBook.status !== newStatus) {
+          await updateBookStatus(selectedBook._id, newStatus);
+          setBooks((prevBooks) =>
+            prevBooks.map((b) =>
+              b._id === selectedBook._id ? { ...b, status: newStatus } : b
+            )
+          );
         }
+
+        localStorage.setItem(`book-${selectedBook._id}-page`, currentPage);
       }
     } catch (err) {
-      console.warn("Could not get current page from iframe:", err);
+      console.warn("Could not update progress:", err);
     }
 
     setSelectedBook(null);
-  };
-
-  const handleTotalPagesSubmit = async (e) => {
-    e.preventDefault();
-    const pages = parseInt(inputTotalPages);
-    if (!isNaN(pages) && pages > 0) {
-      localStorage.setItem(`book-${selectedBook._id}-totalPages`, pages);
-      setTotalPages(pages);
-
-      const progress = Math.floor((currentPage / pages) * 100);
-
-      await updateBookProgress(selectedBook._id, {
-        lastReadPage: currentPage,
-        totalPages: pages,
-        progress,
-      });
-
-      const newStatus = progress === 100 ? "Completed" : "Reading";
-      if (selectedBook.status !== newStatus) {
-        await updateBookStatus(selectedBook._id, newStatus);
-        setBooks((prevBooks) =>
-          prevBooks.map((b) =>
-            b._id === selectedBook._id ? { ...b, status: newStatus } : b
-          )
-        );
-      }
-    } else {
-      alert("Please enter a valid number.");
-    }
   };
 
   const filteredBooks = books.filter((book) => {
@@ -182,7 +147,7 @@ function BookLibrary() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-4 gap-6 ">
+      <div className="grid md:grid-cols-4 gap-6">
         {filteredBooks.map((book) => {
           const savedPage = parseInt(
             localStorage.getItem(`book-${book._id}-page`) || "1"
@@ -224,7 +189,7 @@ function BookLibrary() {
 
       {selectedBook && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-4xl h-[80vh] relative p-4 flex flex-col">
+          <div className="bg-white rounded-lg w-full max-w-4xl h-[90vh] relative p-4 flex flex-col">
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-xl font-semibold">{selectedBook.title}</h3>
               <button
@@ -235,97 +200,78 @@ function BookLibrary() {
               </button>
             </div>
 
-            <iframe
-              src={`${selectedBook.pdfUrl}#page=${currentPage}`}
-              className="flex-1 border rounded mb-2"
-              title="Book PDF"
-            />
-
-            {!totalPages && (
-              <form
-                onSubmit={handleTotalPagesSubmit}
-                className="mb-2 flex gap-2 items-center"
-              >
-                <label className="text-sm">Enter total pages:</label>
-                <input
-                  type="number"
-                  value={inputTotalPages}
-                  onChange={(e) => setInputTotalPages(e.target.value)}
-                  className="border p-1 rounded w-24"
-                  min={1}
-                  required
-                />
+            <div className="flex justify-between items-center mb-2">
+              <div className="flex gap-2 items-center">
                 <button
-                  type="submit"
-                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                  onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}
+                  className="px-3 py-1 bg-gray-300 rounded"
                 >
-                  Save
+                  −
                 </button>
-              </form>
-            )}
-
-            {totalPages && (
-              <div className="mt-2 flex justify-between items-center">
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    const input = e.target.pageInput.value;
-                    const page = parseInt(input);
-                    if (!isNaN(page) && page > 0 && page <= totalPages) {
-                      setCurrentPage(page);
-                      localStorage.setItem(
-                        `book-${selectedBook._id}-page`,
-                        page
-                      );
-
-                      const progress = Math.floor((page / totalPages) * 100);
-
-                      await updateBookProgress(selectedBook._id, {
-                        lastReadPage: page,
-                        totalPages,
-                        progress,
-                      });
-
-                      const newStatus =
-                        progress === 100 ? "Completed" : "Reading";
-                      if (selectedBook.status !== newStatus) {
-                        await updateBookStatus(selectedBook._id, newStatus);
-                        setBooks((prevBooks) =>
-                          prevBooks.map((b) =>
-                            b._id === selectedBook._id
-                              ? { ...b, status: newStatus }
-                              : b
-                          )
-                        );
-                      }
-                    } else {
-                      alert(
-                        `Please enter a valid page between 1 and ${totalPages}`
-                      );
-                    }
-                  }}
-                  className="flex items-center gap-2"
+                <button
+                  onClick={() => setZoom((z) => z + 0.1)}
+                  className="px-3 py-1 bg-gray-300 rounded"
                 >
-                  <input
-                    type="number"
-                    name="pageInput"
-                    min={1}
-                    max={totalPages}
-                    defaultValue={currentPage}
-                    className="p-2 border rounded w-24"
-                  />
-                  <button
-                    type="submit"
-                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                  >
-                    Go
-                  </button>
-                </form>
-                <span className="text-sm text-gray-600">
-                  Page {currentPage} of {totalPages}
-                </span>
+                  +
+                </button>
+                <a
+                  href={selectedBook.pdfUrl}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-3 px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                >
+                  ⬇
+                </a>
               </div>
-            )}
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {totalPages || "?"}
+              </span>
+            </div>
+
+            <div
+              ref={viewerRef}
+              className="flex-1 overflow-auto border rounded p-2 bg-gray-50"
+            >
+              <Document
+                file={selectedBook.pdfUrl}
+                onLoadSuccess={({ numPages }) => {
+                  setTotalPages(numPages);
+                  localStorage.setItem(
+                    `book-${selectedBook._id}-totalPages`,
+                    numPages
+                  );
+                }}
+                loading={<div>Loading PDF...</div>}
+              >
+                <Page
+                  pageNumber={currentPage}
+                  width={pageWidth > 0 ? pageWidth * zoom : undefined}
+                  renderAnnotationLayer={false}
+                  renderTextLayer={false}
+                  className="!mb-0"
+                />
+              </Document>
+            </div>
+
+            <div className="mt-3 flex justify-between items-center">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                className="px-3 py-1 bg-gray-300 rounded"
+                disabled={currentPage <= 1}
+              >
+                ←
+              </button>
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(totalPages || 1, prev + 1))
+                }
+                className="px-3 py-1 bg-gray-300 rounded"
+                disabled={currentPage >= totalPages}
+              >
+                →
+              </button>
+            </div>
           </div>
         </div>
       )}
