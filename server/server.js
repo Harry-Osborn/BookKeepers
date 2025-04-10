@@ -5,8 +5,8 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
 const authRouter = require("./routes/auth/auth-routes");
-const bookRoutes = require("./routes/bookRoutes");
-const uploadRoutes = require("./routes/userRoutes"); // ✅ renamed
+const bookRoutes = require("./routes/book/book-routes");
+const uploadRoutes = require("./routes/user/user-routes"); // ✅ renamed
 
 const app = express();
 
