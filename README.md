@@ -20,6 +20,7 @@ BookLibrary is a full-stack MERN application that allows users to upload books (
 ## 🖥️ Tech Stack
 
 ### 🔧 Backend
+
 - Node.js
 - Express.js
 - MongoDB + Mongoose
@@ -29,6 +30,7 @@ BookLibrary is a full-stack MERN application that allows users to upload books (
 - CORS + dotenv
 
 ### 🎨 Frontend
+
 - React.js + Vite
 - React Router
 - react-pdf (PDF rendering & page tracking)
@@ -149,3 +151,10 @@ Made with 💙 by [Your Name](https://github.com/your-username)
 ## 📃 License
 
 This project is licensed under the MIT License.
+
+team members:
+surya
+karthik
+hardeep
+sarvani
+mehek
