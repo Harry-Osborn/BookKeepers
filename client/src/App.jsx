@@ -14,7 +14,6 @@ import UnauthPage from "./pages/unauth-page";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect } from "react";
 import { checkAuth } from "./store/auth-slice";
-// import { Skeleton } from "@/components/ui/skeleton";
 import OtpModal from "./components/common/OtpModal";
 import ReaderLayout from "./components/auth/readingLayout";
 import BookDetails from "./pages/book-store/BookDetails";
@@ -30,16 +29,17 @@ function App() {
     dispatch(checkAuth(token));
   }, [dispatch]);
 
-  // if (isLoading) return <Skeleton className="w-[800] bg-black h-[600px]" />;
-
-  console.log(isLoading, user);
+  // Wait until auth check is complete
+  if (isLoading || isAuthenticated === null) return null;
 
   return (
     <Routes>
       <Route
         path="/"
         element={
-          <CheckAuth isAuthenticated={isAuthenticated} user={user}></CheckAuth>
+          <CheckAuth isAuthenticated={isAuthenticated} user={user}>
+            <div />
+          </CheckAuth>
         }
       />
 
@@ -74,7 +74,6 @@ function App() {
       </Route>
 
       <Route path="/unauth-page" element={<UnauthPage />} />
-
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

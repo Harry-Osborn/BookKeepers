@@ -3,21 +3,23 @@ import { Navigate, useLocation } from "react-router-dom";
 function CheckAuth({ isAuthenticated, user, children }) {
   const location = useLocation();
 
-  console.log(location.pathname, isAuthenticated);
+  console.log("Path:", location.pathname, "| Authenticated:", isAuthenticated);
 
-  if (location.pathname === "/") {
-    if (!isAuthenticated) {
-      return <Navigate to="/auth/login" />;
-    } else {
-      if (user?.role === "admin") {
-        return <Navigate to="/admin/dashboard" />;
-      } else {
-        return <Navigate to="/books/home" />;
-      }
-    }
+  // Wait until auth state is resolved
+  if (isAuthenticated === null || isAuthenticated === undefined) {
+    return null; // or a loading spinner
   }
 
-  //if user is not authenticted and is trying to access the inner pages send him back to login page
+  // Redirect root path to login or books home
+  if (location.pathname === "/") {
+    return isAuthenticated ? (
+      <Navigate to="/books/home" />
+    ) : (
+      <Navigate to="/auth/login" />
+    );
+  }
+
+  // Not authenticated and accessing inner pages (except login/register)
   if (
     !isAuthenticated &&
     !(
@@ -28,35 +30,13 @@ function CheckAuth({ isAuthenticated, user, children }) {
     return <Navigate to="/auth/login" />;
   }
 
-  // if user is authenticated and is in the login page or register page and is admin role then give him access to admin dashboard, else send him to home page of the application
+  // Authenticated but trying to access login or register
   if (
     isAuthenticated &&
     (location.pathname.includes("/login") ||
       location.pathname.includes("/register"))
   ) {
-    if (user?.role === "admin") {
-      return <Navigate to="/admin/dashboard" />;
-    } else {
-      return <Navigate to="/books/home" />;
-    }
-  }
-
-  // if any non admin user tries to access the admin pages then send him to unauth page
-  if (
-    isAuthenticated &&
-    user?.role !== "admin" &&
-    location.pathname.includes("admin")
-  ) {
-    return <Navigate to="/unauth-page" />;
-  }
-
-  // if user is an admin and is trying to access the shop pages of other users send him back to admin page
-  if (
-    isAuthenticated &&
-    user?.role === "admin" &&
-    location.pathname.includes("books")
-  ) {
-    return <Navigate to="/admin/dashboard" />;
+    return <Navigate to="/books/home" />;
   }
 
   return <>{children}</>;
