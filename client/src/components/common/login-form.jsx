@@ -9,8 +9,9 @@ import {
 } from "../ui/select";
 import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
+import OtpModal from "./OtpModal";
 
-function CommonForm({
+function LoginForm({
   formControls,
   formData,
   setFormData,
@@ -18,6 +19,8 @@ function CommonForm({
   buttonText,
   isBtnDisabled,
 }) {
+
+    const [showOtpModal, setShowOtpModal] = useState(false);
   function renderInputsByComponentType(getControlItem) {
     let element = null;
     const value = formData[getControlItem.name] || "";
@@ -109,6 +112,7 @@ function CommonForm({
   }
 
   return (
+    <>
     <form onSubmit={onSubmit}>
       <div className="flex flex-col gap-3">
         {formControls.map((controlItem) => (
@@ -122,7 +126,16 @@ function CommonForm({
         {buttonText || "Submit"}
       </Button>
     </form>
+    <OtpModal
+        isOpen={showOtpModal}
+        email={email}
+        onClose={() => setShowOtpModal(false)}
+        onSuccess={() => {
+          setShowOtpModal(false);
+        }}
+      />
+    </>
   );
 }
 
-export default CommonForm;
+export default LoginForm;

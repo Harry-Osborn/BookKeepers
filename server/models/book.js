@@ -9,6 +9,10 @@ const bookSchema = new mongoose.Schema({
     enum: ["Unread", "Reading", "Completed"],
     default: "Unread",
   },
+  description:{
+    type:String,
+    required:true
+  },
   coverImageUrl: { type: String },
   pdfUrl: { type: String },
   lastReadPage: { type: Number, default: 0 },
@@ -19,6 +23,10 @@ const bookSchema = new mongoose.Schema({
     ref: "User",
     required: true, // ✅ Required so every book is linked to a user
   },
+  favourite:{
+    type:Boolean,
+    default:false
+  }
 });
 
 module.exports = mongoose.model("Book", bookSchema);

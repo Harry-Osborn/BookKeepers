@@ -1,12 +1,14 @@
 const Book = require("../../models/book");
-const uploadFileToS3 = require("../../helpers/uploadtos3");
+const uploadFileToS3 = require("../../helpers/uploadtos3"); // AWS S3 upload helper
 
-// Add a new book with Image & PDF Upload
+/**
+ * @desc    Add a new book with image and PDF file upload
+ */
 const addBook = async (req, res) => {
   try {
-    const { title, author, genre, status, totalPages } = req.body;
+    const { title, author, genre, status, totalPages, description } = req.body;
 
-    if (!title || !author || !genre) {
+    if (!title || !author || !genre || !description) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -31,10 +33,11 @@ const addBook = async (req, res) => {
       author,
       genre,
       status: bookStatus,
+      description,
       coverImageUrl,
       pdfUrl,
       totalPages: totalPages ? parseInt(totalPages) : 0,
-      userId: req.user.id, // ✅ Associate book with the user
+      userId: req.user.id, // Associate book with the user
     });
 
     await newBook.save();
@@ -52,7 +55,9 @@ const addBook = async (req, res) => {
   }
 };
 
-// Get all books
+/**
+ * @desc    Fetch all books for the authenticated user
+ */
 const getBooks = async (req, res) => {
   try {
     const books = await Book.find({ userId: req.user.id });
@@ -66,7 +71,9 @@ const getBooks = async (req, res) => {
   }
 };
 
-// Update only the status of a book
+/**
+ * @desc    Update only the status of a book
+ */
 const updateBookStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -86,7 +93,6 @@ const updateBookStatus = async (req, res) => {
         .status(404)
         .json({ message: "Book not found or unauthorized" });
     }
-
     return res.status(200).json({ message: "Status updated", book });
   } catch (error) {
     console.error("❌ Error updating status:", error.message);
@@ -96,8 +102,10 @@ const updateBookStatus = async (req, res) => {
   }
 };
 
-// Update book details with optional file uploads
-const updateBook = async (req, res) => {
+/**
+ * @desc    Update book details with optional file uploads
+ */
+const updateBookDetails = async (req, res) => {
   try {
     const book = await Book.findOne({
       _id: req.params.id,
@@ -137,7 +145,7 @@ const updateBook = async (req, res) => {
       book.totalPages = parseInt(totalPages);
     }
 
-    // ✅ Retain existing image/pdf if no new file uploaded
+    // Retain existing image/pdf if no new file uploaded
     if (existingCoverImageUrl && !req.files?.coverImage) {
       book.coverImageUrl = existingCoverImageUrl;
     }
@@ -146,7 +154,7 @@ const updateBook = async (req, res) => {
       book.pdfUrl = existingPdfUrl;
     }
 
-    // ✅ Upload new files if provided
+    // Upload new files if provided
     if (req.files?.coverImage) {
       const coverImageFile = req.files.coverImage[0];
       book.coverImageUrl = await uploadFileToS3(coverImageFile, "covers");
@@ -173,7 +181,9 @@ const updateBook = async (req, res) => {
   }
 };
 
-// Delete a book
+/**
+ * @desc    Delete a book by ID
+ */
 const deleteBook = async (req, res) => {
   try {
     const book = await Book.findOneAndDelete({
@@ -197,10 +207,73 @@ const deleteBook = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Toggle the favourite status of a book
+ */
+const toggleFavourite = async (req, res) => {
+  try {
+    const bookId = req.params.bookId;
+    const { favourite } = req.body; // expected to be boolean
+    const userId = req.user.id;
+
+    // Validate book ownership
+    const book = await Book.findOne({ _id: bookId, userId });
+    if (!book) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Book not found or unauthorized." });
+    }
+
+    // Update favourite status
+    book.favourite = favourite;
+    await book.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Book marked as ${favourite ? "favourite" : "not favourite"}.`,
+      book,
+    });
+  } catch (error) {
+    console.error("Error updating favourite status:", error.message);
+    return res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+/**
+ * @desc    Get a book by ID
+ */
+const getBook = async (req, res) => {
+  try {
+    const bookId = req.params.bookId;
+
+    // Validate book ownership
+    const book = await Book.findById({ _id: bookId });
+    if (!book) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Book not found or unauthorized." });
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Book returned",
+      book,
+    });
+  } catch (error) {
+    console.error("Error retrieving book:", error.message);
+    return res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   addBook,
   getBooks,
   updateBookStatus,
-  updateBook,
+  updateBookDetails,
   deleteBook,
+  toggleFavourite,
+  getBook,
 };

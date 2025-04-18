@@ -33,6 +33,15 @@ export const fetchBooksFromDB = async (userId) => {
   }
 };
 
+export const fetchSingleBookFromDB = async (bookId) => {
+  try {
+    const response = await api.get(`/books/getBook/${bookId}`);
+    return response.data?.book;
+  } catch (error) {
+    console.error("Error fetching single book:", error);
+    return {};
+  }
+};
 // 🔄 Update book status
 export const updateBookStatus = async (bookId, newStatus) => {
   try {
@@ -60,7 +69,8 @@ export const updateBookProgress = async (bookId, data) => {
 // 👤 Fetch user from backend
 export const fetchUserFromDB = async () => {
   try {
-    const response = await api.get("/user");
+    const userId = localStorage.getItem("userId");
+    const response = await api.put(`/user/getUser/${userId}`);
     console.log("User fetched from DB:", response.data);
     return response.data;
   } catch (error) {
@@ -91,6 +101,32 @@ export const uploadImageToS3 = async (file) => {
   } catch (error) {
     console.error("Error uploading image to S3:", error);
     throw error;
+  }
+};
+
+// 🖼️ Upload image to AWS S3 via backend route
+export const UpdateprofileImage = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await api.post("/user/profileChange", formData);
+    return response.data.imageUrl;
+  } catch (error) {
+    console.error("Error uploading image to S3:", error);
+    throw error;
+  }
+};
+
+export const toggleFavoriteInDb = async (bookId, newStatus) => {
+  try {
+    const response = await api.post(`books/favourite/${bookId}`, {
+      favourite: newStatus,
+    });
+    return response.data.message;
+  } catch (err) {
+    console.error("Error adding book to favourite:", err);
+    throw err;
   }
 };
 

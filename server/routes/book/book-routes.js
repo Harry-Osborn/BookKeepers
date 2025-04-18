@@ -1,12 +1,14 @@
 const express = require("express");
-const upload = require("../../helpers/upload");
+const upload = require("../../helpers/upload"); // Multer middleware
 const { authMiddleware } = require("../../controllers/auth/auth-controller");
 const {
   addBook,
   getBooks,
   updateBookStatus,
-  updateBook,
+  updateBookDetails,
   deleteBook,
+  toggleFavourite,
+  getBook,
 } = require("../../controllers/book/book-controller");
 
 const router = express.Router();
@@ -48,7 +50,7 @@ router.put(
     { name: "coverImage", maxCount: 1 },
     { name: "pdf", maxCount: 1 },
   ]),
-  updateBook
+  updateBookDetails
 );
 
 /**
@@ -56,5 +58,17 @@ router.put(
  * @desc    Delete a book by ID
  */
 router.delete("/:id", authMiddleware, deleteBook);
+
+/**
+ * @route   POST /favourite/:bookId
+ * @desc    Toggles the book as favourited or not
+ */
+router.post("/favourite/:bookId", authMiddleware, toggleFavourite);
+
+/**
+ * @route   GET /getBook/:bookId
+ * @desc    Returns the book
+ */
+router.get("/getBook/:bookId", authMiddleware, getBook);
 
 module.exports = router;

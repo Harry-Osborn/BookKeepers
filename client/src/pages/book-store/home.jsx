@@ -1,96 +1,158 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchBooksFromDB } from "@/services/api";
-
+import BookReaderModal from "@/components/common/book-reader-comp";
 function BookpageHome() {
   const [booksdata, setBooksdata] = useState([]);
+  const [selectedBook, setSelectedBook] = useState(null);
+
+  const handleRead = (book) => {
+    setSelectedBook(book);
+  };
+
+  const getBooks = async () => {
+    try {
+      const userId = localStorage.getItem("userId");
+      if (!userId) return;
+      const userBooks = await fetchBooksFromDB(userId);
+      setBooksdata(userBooks);
+    } catch (error) {
+      console.error("Failed to fetch books:", error);
+    }
+  };
+  // const percentage = Math.min(Math.max(progress, 0), 100);
+  const getpercentage = (progess) => {
+    return Math.min(Math.max(progess, 0), 100);
+  };
 
   useEffect(() => {
-    const getBooks = async () => {
-      try {
-        const userId = localStorage.getItem("userId");
-        if (!userId) {
-          console.warn("❌ User ID not found in localStorage");
-          return;
-        }
-
-        const userBooks = await fetchBooksFromDB(userId);
-        console.log("✅ Books fetched for user:", userBooks);
-        setBooksdata(userBooks);
-      } catch (error) {
-        console.error("❌ Failed to fetch books:", error);
-      }
-    };
-
     getBooks();
   }, []);
 
-  // 📚 Books with status "Reading", sorted by progress, top 3
   const continueReading = booksdata
     .filter((book) => book.status === "Reading")
-    .sort((a, b) => b.progress - a.progress)
-    .slice(0, 3);
+    .sort((a, b) => b.progress - a.progress);
 
-  // 📖 Books with status "Unread"
-  const unreadbooksdata = booksdata.filter((book) => book.status === "Unread");
+  const unreadBooks = booksdata.filter((book) => book.status === "Unread");
 
-  return (
-    <div className="container mx-auto p-6">
-      {/* 📌 Continue Reading Section */}
-      <section>
-        <h2 className="text-2xl font-bold mb-4">Continue Reading</h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          {continueReading.map((book) => (
-            <div key={book._id} className="p-4 border shadow-lg rounded-lg">
-              {book.coverImageUrl && (
-                <img
-                  src={book.coverImageUrl}
-                  alt={book.title}
-                  className="w-full h-48 object-cover rounded mb-3"
-                />
-              )}
-              <h3 className="text-lg font-semibold">{book.title}</h3>
-              <p className="text-sm text-gray-500">by {book.author}</p>
-              <div className="mt-2 bg-gray-200 h-2 rounded-full">
+  const BookSlider = ({ books, section }) => (
+    <div className="relative">
+      <div
+        className="flex gap-6 overflow-x-scroll pb-2 scroll-smooth snap-x snap-mandatory whitespace-nowrap no-scrollbar"
+        style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+      >
+        <style>{`
+          .no-scrollbar::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+
+        {books.slice(0, 8).map((book) => (
+          <div
+            key={book._id}
+            className="group w-[200px] h-[300px] flex-shrink-0 snap-start relative"
+          >
+            <div className="relative">
+              <img
+                src={book.coverImageUrl}
+                alt={book.title}
+                className="w-full h-64 object-cover shadow-lg border border-gray-700 transition-all group-hover:h-64 group-hover:scale-y-125 group-hover:scale-x-125 group-hover:shadow-xl"
+              />
+              <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  className="bg-blue-500 h-2 rounded-full"
+                  className="h-full bg-green-200 transition-all duration-500"
                   style={{ width: `${book.progress}%` }}
                 ></div>
               </div>
-              <p className="text-sm mt-2">{book.progress}% Completed</p>
+              {/* {section === "reading" ? "Continue" : "Start"} */}
+              <div className="absolute inset-0 group-hover:my-0  opacity-0 group-hover:opacity-100  flex flex-col justify-end group-hover:h-75 group-hover:scale-125 group-hover:shadow-xl">
+                <button
+                  onClick={() => handleRead(book)}
+                  className="absolute bottom-0 left-0 py-2 w-full text-sm hover:text-white hover:bg-slate-900 bg-white text-gray-900 "
+                >
+                  {section === "reading" ? "Continue" : "Start"}
+                </button>
+                {/* </div> */}
+              </div>
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+        ))}
 
-      {/* 📚 Books to Be Read Section */}
-      <section className="mt-8">
-        <h2 className="text-2xl font-bold mb-4">Books to Be Read</h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          {unreadbooksdata.slice(0, 3).map((book) => (
-            <div key={book._id} className="p-4 border shadow-lg rounded-lg">
-              {book.coverImageUrl && (
-                <img
-                  src={book.coverImageUrl}
-                  alt={book.title}
-                  className="w-full h-48 object-cover rounded mb-3"
-                />
-              )}
-              <h3 className="text-lg font-semibold">{book.title}</h3>
-              <p className="text-sm text-gray-500">by {book.author}</p>
+        {books.length > 8 && (
+          <Link
+            to="/books/library"
+            className="w-[200px] flex-shrink-0 flex items-center justify-center snap-start"
+          >
+            <div
+              className="text-2xl p-2 group w-fit grid"
+              style={{ clipPath: "inset(0 0 0 0)" }}
+            >
+              <div className="[grid-area:1/1] flex items-center justify-center h-10 w-10 transition ease-in-out group-hover:delay-300 -translate-x-10 group-hover:translate-x-0">
+                ➝
+              </div>
+              <div className="[grid-area:1/1] flex items-center justify-center h-10 w-10 transition ease-in-out delay-300 group-hover:delay-[0s] duration-300 group-hover:translate-x-10">
+                ➝
+              </div>
             </div>
-          ))}
-        </div>
-
-        <div className="mt-4">
-          <Link to="/books/library?filter=unread">
-            <button className="px-4 py-2 bg-blue-500 text-white rounded">
-              Show Unread Books
-            </button>
           </Link>
-        </div>
-      </section>
+        )}
+      </div>
     </div>
+  );
+
+  return (
+    <>
+      <div className="relative z-10 px-4 py-10 sm:px-6 lg:px-10 text-white">
+        <div className="text-center mb-12">
+          <h1 className="font-playfair italic text-4xl text-white ">
+            Where Every Book Finds Its Chapter.
+          </h1>
+          {/* <p className="text-gray-300 mt-4 text-sm font-diphylleia">
+            Track, Read, and Conquer your Bookshelf
+          </p> */}
+        </div>
+
+        {/* Continue Reading */}
+        <div className="p-2 shadow-lg mb-10">
+          <h2 className="text-2xl font-semibold text-white mb-4">
+            Continue Reading
+          </h2>
+          {continueReading.length === 0 ? (
+            <p className="text-gray-400 italic text-center">
+              You haven’t started any books yet.
+            </p>
+          ) : (
+            <BookSlider books={continueReading} section="reading" />
+          )}
+        </div>
+
+        {/* Unread Books */}
+        <div className="p-2 shadow-lg mb-10">
+          <h2 className="text-2xl font-semibold text-white mb-4">
+            Books to Be Read
+          </h2>
+          {unreadBooks.length === 0 ? (
+            <p className="text-gray-400 italic text-center">
+              You’ve read all your books. Great job!
+            </p>
+          ) : (
+            <BookSlider books={unreadBooks} section="unread" />
+          )}
+        </div>
+
+        {selectedBook && (
+          <div className="my-24">
+            <BookReaderModal
+              book={selectedBook}
+              onClose={() => {
+                setSelectedBook(null);
+                getBooks();
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 

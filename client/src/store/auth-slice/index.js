@@ -13,7 +13,6 @@ const initialState = {
 
 export const registerUser = createAsyncThunk(
   "/auth/register",
-
   async (formData) => {
     const response = await axios.post(`${BASE_URL}/auth/register`, formData, {
       withCredentials: true,
@@ -23,28 +22,45 @@ export const registerUser = createAsyncThunk(
   }
 );
 
-export const loginUser = createAsyncThunk("/auth/login", async (formData) => {
-  const response = await api.post("/auth/login", formData);
-  const user = response.data?.user;
+export const loginUser = createAsyncThunk("/auth/login", async (formData, thunkAPI) => {
+  try {
+    const response = await api.post("/auth/login", formData);
+    const { success, user, token, status, message } = response.data;
 
-  // ✅ Check both `id` and `_id`
-  const userId = user?.id || user?._id;
+    if (!success && status == 0) {
+      // 🚨 User is not verified - OTP flow
+      return thunkAPI.rejectWithValue({
+        type: "UNVERIFIED_USER",
+        message,
+        userId: response.data.id,
+      });
+    }
 
-  if (response.data.success && userId) {
-    localStorage.setItem("token", response.data.token);
-    localStorage.setItem("user", JSON.stringify(user));
-    localStorage.setItem("userId", userId); // ✅ Correct value stored
-    console.log("✅ Stored userId:", userId);
-  } else {
-    console.error("❌ Could not store userId. User object:", user);
+    // ✅ Check both `id` and `_id`
+    const userId = user?.id || user?._id;
+
+    if (success && userId) {
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("userId", userId); // ✅ Correct value stored
+      console.log("✅ Stored userId:", userId);
+      return response.data;
+    }
+
+    return thunkAPI.rejectWithValue({
+      type: "INVALID_CREDENTIALS",
+      message: "Login failed. Invalid credentials.",
+    });
+  } catch (error) {
+    return thunkAPI.rejectWithValue({
+      type: "SERVER_ERROR",
+      message: error?.response?.data?.message || "Server error",
+    });
   }
-
-  return response.data;
 });
 
 export const logoutUser = createAsyncThunk(
   "/auth/logout",
-
   async () => {
     const response = await axios.post(
       `${BASE_URL}/auth/logout`,
@@ -60,7 +76,6 @@ export const logoutUser = createAsyncThunk(
 
 export const checkAuth = createAsyncThunk(
   "/auth/checkauth",
-
   async (token) => {
     const response = await axios.get(`${BASE_URL}/auth/check-auth`, {
       headers: {

@@ -1,29 +1,46 @@
 const express = require("express");
+const router = express.Router();
 const upload = require("../../helpers/upload"); // Multer middleware
+const { authMiddleware } = require("../../controllers/auth/auth-controller");
 const {
   uploadProfileImage,
-  getAllUsers,
-  updateUser,
+  getUserById,
+  updateUserName,
+  changeProfilePicture,
 } = require("../../controllers/user/user-controller");
-
-const router = express.Router();
 
 /**
  * @route   POST /api/user/upload
  * @desc    Upload profile image to AWS S3
  */
-router.post("/upload", upload.single("file"), uploadProfileImage);
+router.post(
+  "/upload",
+  authMiddleware,
+  upload.single("file"),
+  uploadProfileImage
+);
 
 /**
- * @route   GET /api/user
- * @desc    Fetch all users
+ * @route   PUT /api/user/getUser/:userId
+ * @desc    Get user data by ID
  */
-router.get("/", getAllUsers);
+router.put("/getUser/:userId", authMiddleware, getUserById);
 
 /**
  * @route   PUT /api/user/:id
- * @desc    Update user info by ID (username and/or profile image)
+ * @desc    Update user info by ID (username only)
  */
-router.put("/:id", updateUser);
+router.put("/:id", authMiddleware, updateUserName);
+
+/**
+ * @route   POST /api/user/profileChange
+ * @desc    Update user profile image
+ */
+router.post(
+  "/profileChange",
+  authMiddleware,
+  upload.single("file"),
+  changeProfilePicture
+);
 
 module.exports = router;

@@ -23,6 +23,8 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: "", // URL to profile picture (e.g., from S3)
   },
+  otp: { type: Number },
+  status:{type:Number,default:0},
 });
 
 const User = mongoose.model("User", UserSchema);
