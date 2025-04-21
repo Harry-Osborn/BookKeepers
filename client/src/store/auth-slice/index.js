@@ -22,72 +22,68 @@ export const registerUser = createAsyncThunk(
   }
 );
 
-export const loginUser = createAsyncThunk("/auth/login", async (formData, thunkAPI) => {
-  try {
-    const response = await api.post("/auth/login", formData);
-    const { success, user, token, status, message } = response.data;
+export const loginUser = createAsyncThunk(
+  "/auth/login",
+  async (formData, thunkAPI) => {
+    try {
+      const response = await api.post("/auth/login", formData);
+      const { success, user, token, status, message } = response.data;
 
-    if (!success && status == 0) {
-      // 🚨 User is not verified - OTP flow
+      if (!success && status == 0) {
+        // 🚨 User is not verified - OTP flow
+        return thunkAPI.rejectWithValue({
+          type: "UNVERIFIED_USER",
+          message,
+          userId: response.data.id,
+        });
+      }
+
+      // ✅ Check both `id` and `_id`
+      const userId = user?.id || user?._id;
+
+      if (success && userId) {
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem("userId", userId); // ✅ Correct value stored
+        console.log("✅ Stored userId:", userId);
+        return response.data;
+      }
+
       return thunkAPI.rejectWithValue({
-        type: "UNVERIFIED_USER",
-        message,
-        userId: response.data.id,
+        type: "INVALID_CREDENTIALS",
+        message: "Login failed. Invalid credentials.",
+      });
+    } catch (error) {
+      return thunkAPI.rejectWithValue({
+        type: "SERVER_ERROR",
+        message: error?.response?.data?.message || "Server error",
       });
     }
-
-    // ✅ Check both `id` and `_id`
-    const userId = user?.id || user?._id;
-
-    if (success && userId) {
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("userId", userId); // ✅ Correct value stored
-      console.log("✅ Stored userId:", userId);
-      return response.data;
-    }
-
-    return thunkAPI.rejectWithValue({
-      type: "INVALID_CREDENTIALS",
-      message: "Login failed. Invalid credentials.",
-    });
-  } catch (error) {
-    return thunkAPI.rejectWithValue({
-      type: "SERVER_ERROR",
-      message: error?.response?.data?.message || "Server error",
-    });
   }
+);
+
+export const logoutUser = createAsyncThunk("/auth/logout", async () => {
+  const response = await axios.post(
+    `${BASE_URL}/auth/logout`,
+    {},
+    {
+      withCredentials: true,
+    }
+  );
+
+  return response.data;
 });
 
-export const logoutUser = createAsyncThunk(
-  "/auth/logout",
-  async () => {
-    const response = await axios.post(
-      `${BASE_URL}/auth/logout`,
-      {},
-      {
-        withCredentials: true,
-      }
-    );
+export const checkAuth = createAsyncThunk("/auth/checkauth", async (token) => {
+  const response = await axios.get(`${BASE_URL}/auth/check-auth`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    },
+  });
 
-    return response.data;
-  }
-);
-
-export const checkAuth = createAsyncThunk(
-  "/auth/checkauth",
-  async (token) => {
-    const response = await axios.get(`${BASE_URL}/auth/check-auth`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Cache-Control":
-          "no-store, no-cache, must-revalidate, proxy-revalidate",
-      },
-    });
-
-    return response.data;
-  }
-);
+  return response.data;
+});
 
 const authSlice = createSlice({
   name: "auth",
@@ -102,9 +98,9 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(registerUser.pending, (state) => {
-        state.isLoading = true;
-      })
+      // .addCase(registerUser.pending, (state) => {
+      //   state.isLoading = true;
+      // })
       .addCase(registerUser.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = null;
@@ -115,9 +111,9 @@ const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
       })
-      .addCase(loginUser.pending, (state) => {
-        state.isLoading = true;
-      })
+      // .addCase(loginUser.pending, (state) => {
+      //   state.isLoading = true;
+      // })
       .addCase(loginUser.fulfilled, (state, action) => {
         console.log(action);
 

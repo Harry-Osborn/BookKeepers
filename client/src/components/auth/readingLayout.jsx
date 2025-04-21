@@ -14,7 +14,9 @@ function ReaderLayout() {
       const allBooks = await fetchBooksFromDB();
       const foundBook = allBooks.find((b) => b._id === bookId);
       if (foundBook) {
-        const savedPage = parseInt(localStorage.getItem(`book-${bookId}-page`) || "1");
+        const savedPage = parseInt(
+          localStorage.getItem(`book-${bookId}-page`) || "1"
+        );
         setBook({ ...foundBook, savedPage });
         setBooks(allBooks);
       } else {
@@ -31,8 +33,8 @@ function ReaderLayout() {
       <BookReaderModal
         book={book}
         setBooks={setBooks}
-        onClose={() => {navigate("/books/library");
-            
+        onClose={() => {
+          navigate("/books/library");
         }}
       />
     </div>
