@@ -167,7 +167,7 @@ function AddBookPage() {
     .filter((b) => statusFilter === "All" || b.status === statusFilter);
 
   const uniqueGenres = [...new Set(books.map((b) => b.genre))];
-  const statuses = ["Read", "Unread", "In Progress"];
+  const statuses = ["Unread", "Reading", "Completed"];
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-transparent to-gray-900 text-white">

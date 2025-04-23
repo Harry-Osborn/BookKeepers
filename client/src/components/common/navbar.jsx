@@ -62,7 +62,8 @@ function Navbar() {
   const handleLogout = () => {
     dispatch(resetTokenAndCredentials());
     sessionStorage.clear();
-    navigate("/auth/login");
+    localStorage.clear();
+    navigate("/");
   };
 
   const getInitials = () => {

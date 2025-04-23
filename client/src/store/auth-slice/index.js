@@ -71,10 +71,28 @@ export const logoutUser = createAsyncThunk("/auth/logout", async () => {
     }
   );
 
+  localStorage.clear();
+
   return response.data;
 });
 
 export const checkAuth = createAsyncThunk("/auth/checkauth", async (token) => {
+  console.log(token);
+  // if(!localStorage.getItem("token"))
+  // {
+  //   token=null;
+  // }
+  // if(token!=null && localStorage.getItem(token))
+  // {
+  //   token=null;
+  // }
+  // if(token==null)
+  // {
+  //   token=localStorage.getItem('token');
+  //   console.log("token is updated");
+  //   console.log("token is ",token);
+  // }
+  token = localStorage.getItem("token");
   const response = await axios.get(`${BASE_URL}/auth/check-auth`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -136,16 +154,31 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = action.payload.success ? action.payload.user : null;
         state.isAuthenticated = action.payload.success;
+        console.log(action.payload);
+        // if(action.payload.token==undefined || action.payload.token==false)
+        // {
+        // if(localStorage.getItem("token")!=null || localStorage.getItem("token")!=undefined)
+        // {
+        //   sessionStorage.setItem("token",localStorage.getItem("token"));
+        // }
+        // }
+        // sessionStorage.setItem("token", JSON.stringify(action.payload.token));
+        sessionStorage.setItem("token", localStorage.getItem("token"));
       })
       .addCase(checkAuth.rejected, (state, action) => {
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
+        localStorage.clear();
+        sessionStorage.removeItem("token");
+        sessionStorage.clear();
       })
       .addCase(logoutUser.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
+        localStorage.clear();
+        sessionStorage.clear();
       });
   },
 });
