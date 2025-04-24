@@ -36,10 +36,14 @@ const registerUser = async (req, res) => {
 
     await sendMail({
       to: email,
-      subject: "Hello bro ",
+      subject: "Your BookKeepers OTP for Email Verification",
       html: `
-      <p>Hello ${userName},</p>
-             <p>Your OTP "<strong>${otp}</strong>".</p>
+        <p>Hello ${userName},</p>
+        <p>Thank you for registering with <strong>BookKeepers</strong>.</p>
+        <p>Please use the following One-Time Password (OTP) to verify your email address:</p>
+        <p style="font-size: 18px;"><strong>${otp}</strong></p>
+        <p>This OTP is valid for 10 minutes. If you did not request this, you can safely ignore this email.</p>
+        <p>Warm regards,<br/>The BookKeepers Team</p>
       `,
     });
 
@@ -93,10 +97,14 @@ const resendOtp = async (req, res) => {
     await User.updateOne({ _id: user._id }, { $set: { otp: otp } });
     await sendMail({
       to: email,
-      subject: "Hello bro",
+      subject: "Your BookKeepers OTP for Email Verification",
       html: `
-      <p>Hello ${user.userName},</p>
-             <p>Your OTP "<strong>${otp}</strong>".</p>
+        <p>Hello ${userName},</p>
+        <p>Thank you for registering with <strong>BookKeepers</strong>.</p>
+        <p>Please use the following One-Time Password (OTP) to verify your email address:</p>
+        <p style="font-size: 18px;"><strong>${otp}</strong></p>
+        <p>This OTP is valid for 10 minutes. If you did not request this, you can safely ignore this email.</p>
+        <p>Warm regards,<br/>The BookKeepers Team</p>
       `,
     });
     res.status(200).json({ message: "Send SuccessFully", id: user._id });
@@ -120,10 +128,14 @@ const loginUser = async (req, res) => {
       await User.updateOne({ _id: checkUser._id }, { $set: { otp: otp } });
       await sendMail({
         to: email,
-        subject: "Hello bro",
+        subject: "Your BookKeepers OTP for Email Verification",
         html: `
-        <p>Hello ${checkUser.name},</p>
-               <p>Your OTP "<strong>${otp}</strong>".</p>
+          <p>Hello ${userName},</p>
+          <p>Thank you for registering with <strong>BookKeepers</strong>.</p>
+          <p>Please use the following One-Time Password (OTP) to verify your email address:</p>
+          <p style="font-size: 18px;"><strong>${otp}</strong></p>
+          <p>This OTP is valid for 10 minutes. If you did not request this, you can safely ignore this email.</p>
+          <p>Warm regards,<br/>The BookKeepers Team</p>
         `,
       });
       return res.status(403).json({
